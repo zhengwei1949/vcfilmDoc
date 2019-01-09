@@ -10,6 +10,11 @@ export default {
 }
 </script>
 
-<style>
-
+<style scoped>
+/* 移动端 */
+  #app {
+    width: 100%;
+    height: 100%;
+    min-width: 474px;
+  }
 </style>

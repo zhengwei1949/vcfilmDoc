@@ -2,9 +2,10 @@
   <div class="seat">
     <div class="container">
       <ul class="lis">
-        <li v-for="item1 in data" :key="data.code">
-        <span v-for="item2 in item1">
-          <img :src="(item2.status !== 'available')?images[0]: (item2.loveSeat?images[1]:images[2])" alt="">
+        <!--todo:key="item2.code" 绑定的key不显示,也没有报错-->
+        <li v-for="(item1,index1) in data">
+        <span v-for="(item2,index2) in item1" :class="[(item2.status !== 'available')?yishouclass: (item2.loveSeat?qinglvclass:kexuanclass)]" @click="choose(item2.code)" :ref="item2.code">
+          <!--<img :src="(item2.status !== 'available')?images[0]: (item2.loveSeat?images[1]:images[2])" @click="choose(item2.code)" :ref="item2.code">-->
         </span>
         </li>
       </ul>
@@ -22,21 +23,28 @@
 
 <script>
   import datas from '@/assets/data.js'
-  console.log(datas)
   export default {
     name: "seat",
     data () {
       return {
-        // 已售 情侣 可选
-        images: ['http://img.vcdianying.com/nwx/images/green/yixuan_icon.png','http://img.vcdianying.com/nwx/images/qinglv_icon.png','http://img.vcdianying.com/nwx/images/kexuan_icon.png'],
+        // 已售 情侣 可选 已选
+        images: ['http://img.vcdianying.com/nwx/images/green/yixuan_icon.png','http://img.vcdianying.com/nwx/images/qinglv_icon.png','http://img.vcdianying.com/nwx/images/kexuan_icon.png','http://img.vcdianying.com/nwx/images/yishou_icon.png'],
         data: null,
         // 记录下行数
-        rows: null
+        rows: null,
+        // 判定座位类
+        yishouclass: 'yishou',
+        qinglvclass: 'qinglv',
+        kexuanclass: 'kexuan',
+        yixuanclass: 'yixuan',
+        // 限制最多4次点击
+        countNum: 0
       }
     },
     methods: {
       handler () {
       //  处理 datas  把属性data中的cinemaSeatpicDataList(对象)的属性0000000000000001对应的数组中的对象
+
         let arr = datas.data.cinemaSeatpicDataList['0000000000000001']
         console.log(arr)
       //  得到数组arr,应该遍历,根据y的最大值来创建数组容器个数,再遍历根据x相同时,扔进同一个数组 item.yCoord
@@ -48,7 +56,7 @@
         })
         console.log(ylist,xlist)
       //  得到y的最大值
-        let ymax = Math.max.apply(null,ylist)
+        let ymax = Math.max(...ylist)
         this.rows = ymax
       //  定义总容器数组,根据ymax创建数组,并判断x
         let resultArr = []
@@ -82,17 +90,39 @@
               }
             }
           }
+      },
+      choose (code) {
+        console.log(this.$refs[code])
+        const target = this.$refs[code][0].classList
+        // 判断:如果已经有'yishou'的类名,则直接return
+        if (target.contains('yishou')) {
+          return
+        }
+        // 如果不是已售的,则判断当前是否大于等于4
+        if (this.countNum >= 4) {
+          console.log('最多购买4个座位')
+          return
+        }
+        if (target.contains('yixuan')) {
+          target.remove('yixuan')
+          this.countNum--
+        }else{
+          target.add('yixuan')
+          this.countNum++
+        }
       }
     },
     created () {
       this.handler()
+      // 根据后端
+
     }
   }
 </script>
 
 <style scoped>
  .seat {
-   width: 500px;
+   width: 100%;
    height: 220px;
    background-color: #ccc;
    display: flex;
@@ -142,5 +172,21 @@
    font-size: 12px;
    text-align: center;
    line-height: 30px;
+ }
+ .kexuan {
+   background-image: url('../assets/images/kexuan_icon.png');
+   background-size: 30px 30px;
+ }
+ .qinglv {
+   background-image: url('../assets/images/qinglv_icon.png');
+   background-size: 30px 30px;
+ }
+ .yishou {
+   background-image: url('../assets/images/yishou_icon.png');
+   background-size: 30px 30px;
+ }
+ .yixuan {
+   background-image: url('../assets/images/yixuan_icon.png');
+   background-size: 30px 30px;
  }
 </style>

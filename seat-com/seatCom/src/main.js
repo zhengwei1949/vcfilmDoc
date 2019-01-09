@@ -7,14 +7,15 @@ import router from './router'
 // 样式
 import '@/assets/seat.css'
 
-// axios
+// 导入axios
 import axios from 'axios'
+Vue.prototype.axios = axios
 // 导入seat组件,注册为全局
 import Seat from '@/components/seat.vue'
 
 Vue.config.productionTip = false
 
-Vue.prototype.axios = axios
+
 Vue.component('my-seat',Seat)
 
 /* eslint-disable no-new */
