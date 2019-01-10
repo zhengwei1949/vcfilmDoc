@@ -1,6 +1,8 @@
 <template>
   <div id="app">
     <my-seat></my-seat>
+    <my-seatnum></my-seatnum>
+    <my-recommend></my-recommend>
   </div>
 </template>
 

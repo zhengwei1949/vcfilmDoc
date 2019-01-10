@@ -10,13 +10,21 @@ import '@/assets/seat.css'
 // 导入axios
 import axios from 'axios'
 Vue.prototype.axios = axios
-// 导入seat组件,注册为全局
+//插件
+
+
+// 导入组件,注册为全局
 import Seat from '@/components/seat.vue'
+import SeatNum from '@/components/seatnum.vue'
+import Recommend from '@/components/recommend.vue'
+
 
 Vue.config.productionTip = false
 
 
 Vue.component('my-seat',Seat)
+Vue.component('my-seatnum',SeatNum)
+Vue.component('my-recommend',Recommend)
 
 /* eslint-disable no-new */
 new Vue({

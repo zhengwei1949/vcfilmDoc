@@ -1,14 +1,16 @@
 <template>
   <div class="seat">
     <div class="container">
-      <ul class="lis">
-        <!--todo:key="item2.code" 绑定的key不显示,也没有报错-->
-        <li v-for="(item1,index1) in data">
-        <span v-for="(item2,index2) in item1" :class="[(item2.status !== 'available')?yishouclass: (item2.loveSeat?qinglvclass:kexuanclass)]" @click="choose(item2.code)" :ref="item2.code">
+      <div class="seats">
+        <ul class="lis">
+          <!--todo:key="item2.code" 绑定的key不显示,也没有报错-->
+          <li v-for="(item1,index1) in data">
+            <span v-for="(item2,index2) in item1" :class="[(item2.status !== 'available')?yishouclass: (item2.loveSeat?qinglvclass:kexuanclass)]" @click="choose(item2.code)" :ref="item2.code" :data-seatnum="[item2.yCoord,item2.xCoord]">
           <!--<img :src="(item2.status !== 'available')?images[0]: (item2.loveSeat?images[1]:images[2])" @click="choose(item2.code)" :ref="item2.code">-->
-        </span>
-        </li>
-      </ul>
+            </span>
+          </li>
+        </ul>
+      </div>
       <!--红色虚线-->
       <div class="mid_line"></div>
       <!--左侧提示行数-->
@@ -23,13 +25,19 @@
 
 <script>
   import datas from '@/assets/data.js'
+  import { EventBus } from '../eventbus.js'
+  import AlloyFinger from 'alloyfinger'
+  console.log(AlloyFinger)
   export default {
     name: "seat",
     data () {
       return {
-        // 已售 情侣 可选 已选
+        // 已售 情侣 可选 已选  --后面根据需要,最后整理
         images: ['http://img.vcdianying.com/nwx/images/green/yixuan_icon.png','http://img.vcdianying.com/nwx/images/qinglv_icon.png','http://img.vcdianying.com/nwx/images/kexuan_icon.png','http://img.vcdianying.com/nwx/images/yishou_icon.png'],
+        //存储优化后的数据
         data: null,
+        //存储没有已售座位的数据
+        noyishouData: null,
         // 记录下行数
         rows: null,
         // 判定座位类
@@ -38,7 +46,7 @@
         kexuanclass: 'kexuan',
         yixuanclass: 'yixuan',
         // 限制最多4次点击
-        countNum: 0
+        countNum: 0,
       }
     },
     methods: {
@@ -55,8 +63,10 @@
           xlist.push(Number(item.xCoord))
         })
         console.log(ylist,xlist)
-      //  得到y的最大值
+      //  得到y的最大值 x的最大值
         let ymax = Math.max(...ylist)
+        let xmax = Math.max(...xlist)
+        console.log('xmax:'+ xmax)
         this.rows = ymax
       //  定义总容器数组,根据ymax创建数组,并判断x
         let resultArr = []
@@ -75,6 +85,19 @@
               this.sort(item)
             }
           })
+          //增加x权重
+          resultArr.forEach((item,index) => {
+            this.setXWeight(item)
+          })
+          //增加y权重
+          this.setYWeight(resultArr)
+          //计算权重和,并设置给每个对象的新属性totalWeight
+          resultArr.forEach((item1,index1) => {
+            item1.forEach((item2,index2) => {
+              item2.totalWeight = item2.xnum + item2.ynum
+            })
+          })
+
           // 得到最后要使用的数据
           this.data = resultArr
           console.log(resultArr)
@@ -91,31 +114,131 @@
             }
           }
       },
+      //设置x权重函数
+      setXWeight (arr) {
+        for (let i = 0;i < arr.length;i++) {
+          if (i <= (arr.length/2)) {
+            arr[i].xnum = i
+          }else {
+            arr[i].xnum = arr.length-1-i
+          }
+        }
+        return arr
+      },
+      //设置y权重函数
+      setYWeight (arr) {
+          for (let i = 0;i < arr.length;i++) {
+            for (let j=0;j < arr[i].length;j++) {
+              if (i <= (arr.length/2)) {
+                arr[i][j].ynum = i
+              }else {
+                arr[i][j].ynum = arr.length-1-i
+              }
+            }
+          }
+          return arr
+      },
+      //选座点击事件
       choose (code) {
         console.log(this.$refs[code])
         const target = this.$refs[code][0].classList
+        //得到的seatnum是个字符串
+        const seatNum = this.$refs[code][0].dataset.seatnum.split(',')
         // 判断:如果已经有'yishou'的类名,则直接return
         if (target.contains('yishou')) {
           return
         }
-        // 如果不是已售的,则判断当前是否大于等于4
-        if (this.countNum >= 4) {
+        // 如果点击的不是已售的,并且点击的不是已选的,则判断当前是否大于等于4
+        if (this.countNum >= 4 && !target.contains('yixuan')) {
           console.log('最多购买4个座位')
           return
         }
         if (target.contains('yixuan')) {
           target.remove('yixuan')
+          EventBus.$emit('reduceSeatNum',{
+            seatNum
+          })
           this.countNum--
         }else{
           target.add('yixuan')
+          // 选中时,通过data-seatnum 取出当前座位号
+          // console.log(seatNum[0])
+          // console.log(seatNum[1])
+          // 将数组seatnum传递给eventbus
+          EventBus.$emit('getSeatNum',{
+            seatNum
+          })
           this.countNum++
         }
-      }
-    },
+      },
+      //fixme:移动端缩放
+      makeZoom () {
+        const seats = document.getElementsByClassName('seats')[0]
+        const initScale = 1
+        const af = new AlloyFinger(seats,{
+          touchStart () {
+            console.log('touchStart')
+          },
+          tap (e) {
+            console.log(e)
+            console.log('tap')
+          },
+          pinch(e) {
+            seats.scaleX = seats.scaleY = initScale * e.scale;
+          },
+        })
+      },
+      getOneBestSeat () {
+      //  遍历数组,筛选最大权重的座位  ---拿到最大权重的对象中的code属性,根据这个属性给页面中的对应元素设置背景图,排除掉已售,计算属性
+        console.log('选择一个最优座位')
+        this.data.forEach((item,index) => {
+
+        })
+      },
+      // 深拷贝
+      deepCopy (obj) {
+          let objClone = Array.isArray(obj)?[]:{};
+          if(obj && typeof obj ==="object"){
+            for(let key in obj){
+              if(obj.hasOwnProperty(key)){
+                //判断obj子元素是否为对象，如果是，递归复制
+                if(obj[key]&&typeof obj[key] ==="object"){
+                  objClone[key] = this.deepCopy(obj[key]);
+                }else{
+                  //如果不是，简单复制
+                  objClone[key] = obj[key];
+                }
+              }
+            }
+          }
+          return objClone;
+        }
+      },
     created () {
       this.handler()
+      //fixme:forEach没有返回值,暂时考虑使用深拷贝复制没有已售座位的数据
+
+      //todo:深拷贝得到所有数据,再将已售的数据进行剔除---接下来就可以进行直接遍历找到最大权重的数据
+      this.noyishouData = this.deepCopy(this.data)
+      this.noyishouData.forEach((item1,index1) => {
+        //找到数据中的属性status不等于'available'的数据,剔除它
+        item1.forEach((item2,index2) => {
+          if (item2.status !== 'available') {
+            item1.splice(index2,1)
+          }
+        })
+      })
+      console.log(this.noyishouData)
       // 根据后端
 
+    },
+    mounted () {
+      this.makeZoom()
+    //  监听eventbus,根据名,来选择座位个数
+      EventBus.$on('getOneSeat',() =>{
+        //  选择一个最优座位
+        this.getOneBestSeat()
+      })
     }
   }
 </script>
@@ -188,5 +311,10 @@
  .yixuan {
    background-image: url('../assets/images/yixuan_icon.png');
    background-size: 30px 30px;
+ }
+  /* iscroll */
+ .seats {
+   /* -- Attention: This line is extremely important in chrome 55+! -- */
+   touch-action: none;
  }
 </style>
