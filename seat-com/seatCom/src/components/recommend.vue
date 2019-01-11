@@ -17,16 +17,16 @@
     name: "recommend",
     methods: {
       getOneSeat () {
-        EventBus.$emit('getOneSeat')
+        EventBus.$emit('getSeat',{num: 1})
       },
       getTwoSeat () {
-        EventBus.$emit('getOneSeat')
+        EventBus.$emit('getSeat',{num: 2})
       },
       getThreeSeat () {
-
+        EventBus.$emit('getSeat',{num: 3})
       },
       getFourSeat () {
-
+        EventBus.$emit('getSeat',{num: 4})
       },
     }
   }

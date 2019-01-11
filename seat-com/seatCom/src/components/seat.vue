@@ -4,8 +4,8 @@
       <div class="seats">
         <ul class="lis">
           <!--todo:key="item2.code" 绑定的key不显示,也没有报错-->
-          <li v-for="(item1,index1) in data">
-            <span v-for="(item2,index2) in item1" :class="[(item2.status !== 'available')?yishouclass: (item2.loveSeat?qinglvclass:kexuanclass)]" @click="choose(item2.code)" :ref="item2.code" :data-seatnum="[item2.yCoord,item2.xCoord]">
+          <li v-for="(item1) in data">
+            <span v-for="(item2) in item1" :class="[(item2.status !== 'available')?yishouclass: (item2.loveSeat?qinglvclass:kexuanclass)]" @click="choose(item2.code)" :ref="item2.code" :data-seatnum="[item2.yCoord,item2.xCoord]">
           <!--<img :src="(item2.status !== 'available')?images[0]: (item2.loveSeat?images[1]:images[2])" @click="choose(item2.code)" :ref="item2.code">-->
             </span>
           </li>
@@ -29,7 +29,7 @@
   import AlloyFinger from 'alloyfinger'
   console.log(AlloyFinger)
   export default {
-    name: "seat",
+    name: 'seat',
     data () {
       return {
         // 已售 情侣 可选 已选  --后面根据需要,最后整理
@@ -47,6 +47,14 @@
         yixuanclass: 'yixuan',
         // 限制最多4次点击
         countNum: 0,
+        // 从大到小的权重数组-- 一维数组
+        weightSeats: null,
+        // 默认从0开始遍历,传入一个initIndex
+        initIndex: 0,
+        //将传过来的obj的属性值num也挂载在vue上
+        num: null,
+        // 存储找到的推荐座位
+        containArr: []
       }
     },
     methods: {
@@ -127,8 +135,8 @@
       },
       //设置y权重函数
       setYWeight (arr) {
-          for (let i = 0;i < arr.length;i++) {
-            for (let j=0;j < arr[i].length;j++) {
+          for (let i = 0; i < arr.length;i++) {
+            for (let j = 0; j < arr[i].length;j++) {
               if (i <= (arr.length/2)) {
                 arr[i][j].ynum = i
               }else {
@@ -177,23 +185,28 @@
         const initScale = 1
         const af = new AlloyFinger(seats,{
           touchStart () {
-            console.log('touchStart')
+            // console.log('touchStart')
           },
           tap (e) {
-            console.log(e)
-            console.log('tap')
+            // console.log(e)
+            // console.log('tap')
           },
           pinch(e) {
             seats.scaleX = seats.scaleY = initScale * e.scale;
           },
         })
       },
-      getOneBestSeat () {
+      getBestSeat () {
       //  遍历数组,筛选最大权重的座位  ---拿到最大权重的对象中的code属性,根据这个属性给页面中的对应元素设置背景图,排除掉已售,计算属性
-        console.log('选择一个最优座位')
-        this.data.forEach((item,index) => {
-
-        })
+        console.log('选择最优座位')
+        // fixme:如果用户自选之后,点击推荐  (实际上自选与推荐是不能同时发生的)
+        //得到从大到小的权重数组-- 一维数组
+        this.weightSeats = this.sortWeight(this.noyishouData)
+        console.log(this.weightSeats)
+        //每次点击推荐时,都把containArr的元素来清除一下
+        this.containArr = []
+        //默认从0开始遍历,传入一个initIndex
+        this.judge(this.weightSeats,this.initIndex,this.num)
       },
       // 深拷贝
       deepCopy (obj) {
@@ -212,7 +225,48 @@
             }
           }
           return objClone;
+        },
+      // 权重排序--arr指的是二维数组
+      sortWeight (arr) {
+        let resultArr = []
+        for (let i = arr.length-1;i >= 0;i--) {
+          for (let j = arr[i].length-1;j >=0;j--) {
+            resultArr.push(arr[i][j])
+          }
         }
+        resultArr.sort(function (a,b) {
+          return b.totalWeight - a.totalWeight
+        })
+        return resultArr
+        },
+      // 递归判断 是否最大权重的座位周围的个数满足推荐的座位数  参数是权重数组的第一项        判断this.data
+      judge (weightSeats,index,num) {
+        let x = null
+        let y = null
+      //  找到best在this.data中的第二重数组中的位置
+        for (let i = 0;i < this.data.length-1;i++) {
+          for (let j = 0;j < this.data[i].length;j++) {
+            if (this.data[i][j].code === weightSeats[0].code) {
+              y = i
+              x = j
+              console.log(y + '---' + x)
+            }
+          }
+        }
+      //  遍历this.data[y]  根据num取数
+        for (let i = x-1; i < x+num-1; i++) {
+          //如果存在已售的座位,开始数组中的下一个第二权重的元素,直接break
+          if (this.data[y][i].status !== 'available') {
+            this.initIndex++
+            this.judge(this.weightSeats,this.initIndex,this.num)
+            break
+          } else {
+          //  这里说明最优周围没有已售的,可以取到
+            this.containArr.push(this.data[y][i])
+          }
+        }
+        console.log(this.containArr)
+      }
       },
     created () {
       this.handler()
@@ -235,9 +289,11 @@
     mounted () {
       this.makeZoom()
     //  监听eventbus,根据名,来选择座位个数
-      EventBus.$on('getOneSeat',() =>{
+      EventBus.$on('getSeat',(obj) =>{
+        //将传过来的obj的属性值num也挂载在vue上
+        this.num = obj.num
         //  选择一个最优座位
-        this.getOneBestSeat()
+        this.getBestSeat()
       })
     }
   }
