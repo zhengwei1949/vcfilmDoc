@@ -2,12 +2,13 @@
   <div class="seat">
     <div class="container">
       <div class="seats">
+        {{ rows }}---{{ cols }}
         <ul class="lis">
           <!--todo:key="item2.code" 绑定的key不显示,也没有报错-->
-          <li v-for="(item1) in data">
-            <span v-for="(item2) in item1" :class="[(item2.status !== 'available')?yishouclass: (item2.loveSeat?qinglvclass:kexuanclass)]" @click="choose(item2.code)" :ref="item2.code" :data-seatnum="[item2.yCoord,item2.xCoord]">
-          <!--<img :src="(item2.status !== 'available')?images[0]: (item2.loveSeat?images[1]:images[2])" @click="choose(item2.code)" :ref="item2.code">-->
+          <li v-for="m in rows" :key="m">
+            <span v-for="n in cols" :key="n"  v-if="data[m-1][n-1]" :class="[(data[m-1][n-1].status !== 'available')?(data[m-1][n-1].status === 'passway'?'':yishouclass): (data[m-1][n-1].loveSeat?qinglvclass:kexuanclass)]" @click="choose(data[m-1][n-1].code)" :ref="data[m-1][n-1].code" :data-seatnum="[data[m-1][n-1].yCoord,data[m-1][n-1].xCoord]"> 
             </span>
+            <span v-if="!data[m-1][n-1]"></span>
           </li>
         </ul>
       </div>
@@ -16,7 +17,7 @@
       <!--左侧提示行数-->
       <div class="get_rows">
         <ul>
-          <li v-for="num in rows">{{ num }}</li>
+          <li v-for="(num,index) in rows" :key="index">{{ num }}</li>
         </ul>
       </div>
     </div>
@@ -24,22 +25,22 @@
 </template>
 
 <script>
-  import datas from '@/assets/data.js'
+  import datas from '@/assets/data3.js'
+  console.log(JSON.parse(datas).data)
   import { EventBus } from '../eventbus.js'
   import AlloyFinger from 'alloyfinger'
-  console.log(AlloyFinger)
+  // console.log(AlloyFinger)
   export default {
     name: 'seat',
     data () {
       return {
-        // 已售 情侣 可选 已选  --后面根据需要,最后整理
-        images: ['http://img.vcdianying.com/nwx/images/green/yixuan_icon.png','http://img.vcdianying.com/nwx/images/qinglv_icon.png','http://img.vcdianying.com/nwx/images/kexuan_icon.png','http://img.vcdianying.com/nwx/images/yishou_icon.png'],
         //存储优化后的数据
         data: null,
         //存储没有已售座位的数据
         noyishouData: null,
         // 记录下行数
         rows: null,
+        cols: null,
         // 判定座位类
         yishouclass: 'yishou',
         qinglvclass: 'qinglv',
@@ -51,17 +52,30 @@
         weightSeats: null,
         // 默认从0开始遍历,传入一个initIndex
         initIndex: 0,
-        //将传过来的obj的属性值num也挂载在vue上
+        //将传过来的obj的属性值num也挂载在vue上, num指的是推荐座位按钮具体的数据(比如是1,2,3,4)
         num: null,
         // 存储找到的推荐座位
         containArr: []
       }
     },
+    mounted () {
+      this.consoleData()
+      this.makeZoom()
+    //  监听eventbus,根据名,来选择座位个数
+      EventBus.$on('getSeat',(obj) =>{
+        //将传过来的obj的属性值num也挂载在vue上
+        this.num = obj.num
+        //  选择一个最优座位
+        this.getBestSeat()
+      })
+    },
     methods: {
+      consoleData () {
+        console.log(this.data[1][2])
+      },
       handler () {
-      //  处理 datas  把属性data中的cinemaSeatpicDataList(对象)的属性0000000000000001对应的数组中的对象
-
-        let arr = datas.data.cinemaSeatpicDataList['0000000000000001']
+        //  处理 datas  把属性data中的cinemaSeatpicDataList(对象)的属性0000000000000001对应的数组中的对象
+        let arr = JSON.parse(datas).data.cinemaSeatpicDataList['0000000000000001']
         console.log(arr)
       //  得到数组arr,应该遍历,根据y的最大值来创建数组容器个数,再遍历根据x相同时,扔进同一个数组 item.yCoord
         let ylist = []
@@ -76,23 +90,41 @@
         let xmax = Math.max(...xlist)
         console.log('xmax:'+ xmax)
         this.rows = ymax
+        this.cols = xmax
       //  定义总容器数组,根据ymax创建数组,并判断x
         let resultArr = []
         for (let i = 0;i < ymax;i++) {
           resultArr[i] = []
-          //  遍历arr , 其中的 y 如果等于 i,直接把当前项push
+          //  遍历arr , 其中的 y 如果等于 i,直接把当前项push  arr是总的一维数组
           for (let j = 0;j < arr.length;j++) {
+            // 为规则2做标记:已售3 可选0 情侣2 ---后面已选是1
+            if (arr[j].status !=='available') {
+              arr[j].flag = '3'
+            } else if (arr[j].loveSeat) {
+              arr[j].flag = '2'
+            } else {
+              arr[j].flag = '0'
+            }
             if (Number(arr[j].yCoord) === (i+1)) {
               resultArr[i].push(arr[j])
             }
           }
-          // 由于x顺序不规则,所以要将x重新按照从小到大的顺序进行排列
+          // 由于x顺序不规则,所以要将x重新按照从小到大的顺序进行排列---这一步完成之后就是规整的数据了
           resultArr.forEach((item) => {
             for (let n = 0;n < item.length; n++) {
               // 冒泡排序
               this.sort(item)
             }
           })
+          // 排完顺序之后,判断每一项及其下一项之中的xCoord之间的差值是否大于1,如果大于1 ,插入一个对象---性能太差
+          // for (let i = 0;i < resultArr.length;i++) {
+          //   for (let j = 0;j < resultArr[i].length;j++) {
+          //     if (resultArr[i][j+1] && Number(resultArr[i][j+1].xCoord) - Number(resultArr[i][j].xCoord) !== 1) {
+          //       let passObj = this.createPassWay()
+          //       resultArr[i].splice(j,0,passObj)
+          //     }
+          //   }
+          // }
           //增加x权重
           resultArr.forEach((item,index) => {
             this.setXWeight(item)
@@ -110,6 +142,11 @@
           this.data = resultArr
           console.log(resultArr)
         }
+      },
+      createPassWay () {
+        let passWay = {}
+        passWay.status = 'passway'
+        return passWay
       },
       sort (arr) {
           for (let i=0; i<arr.length-1; i++){
@@ -196,8 +233,9 @@
           },
         })
       },
+      // 选择最优座位
       getBestSeat () {
-      //  遍历数组,筛选最大权重的座位  ---拿到最大权重的对象中的code属性,根据这个属性给页面中的对应元素设置背景图,排除掉已售,计算属性
+        // 遍历数组,筛选最大权重的座位  ---拿到最大权重的对象中的code属性,根据这个属性给页面中的对应元素设置背景图,排除掉已售,计算属性
         console.log('选择最优座位')
         // fixme:如果用户自选之后,点击推荐  (实际上自选与推荐是不能同时发生的)
         //得到从大到小的权重数组-- 一维数组
@@ -243,29 +281,263 @@
       judge (weightSeats,index,num) {
         let x = null
         let y = null
-      //  找到best在this.data中的第二重数组中的位置
+        // 找到best在this.data中的第二重数组中的位置  data是原始二维数组,包括已售座位,这里的x,y是索引
         for (let i = 0;i < this.data.length-1;i++) {
           for (let j = 0;j < this.data[i].length;j++) {
-            if (this.data[i][j].code === weightSeats[0].code) {
+            if (this.data[i][j].code === weightSeats[index].code) {
               y = i
               x = j
               console.log(y + '---' + x)
             }
           }
         }
-      //  遍历this.data[y]  根据num取数
-        for (let i = x-1; i < x+num-1; i++) {
-          //如果存在已售的座位,开始数组中的下一个第二权重的元素,直接break
-          if (this.data[y][i].status !== 'available') {
+       
+        // 给当前最优座位best(不是情侣座)加上 flag:'1', 因为weightSeats是权重数组,而我们下面要操作是原始二维数组,所以不能直接给weightSeats[index]设置flag
+        if (this.data[y][x].flag !== '2') {
+        this.data[y][x].flag = '1'
+        // 获取最优座位所在行拼接的flag字符串--这串代码需要在给最优座位标记之后再执行
+        let str = ''
+        for (let i = 0;i < this.data[y].length;i++) {
+          str += this.data[y][i].flag
+        }
+        console.log(str)
+        /* 在这里时,可选 最高 情侣 已售 四种座位的flag已经全部添加完毕,而且知道当前最优座位的索引,所以要在最优座位的所在行中,从左至右将flag拼接
+          利用正则表达式判断,
+        */
+        switch (num) {
+          case 1:
+          this.countNum = 1
+          // 1.直接拿最优座位即可,无需正则表达式,拿到当前对应数据中的属性code,设置code,
+          let code = this.data[y][x].code
+          this.$refs[code][0].classList.add('yixuan')
+          break
+          case 2:
+          this.countNum = 2
+          // 2.两种情况,10 或者 01, reg=/01/ /10/
+          if ((/01/).test(str)) {
+            // 记录最优座位和其左边座位
+            let code1 = this.data[y][x].code
+            let code2 = this.data[y][x-1].code
+            this.$refs[code1][0].classList.add('yixuan')
+            this.$refs[code2][0].classList.add('yixuan')
+            break
+          }
+          if ((/10/).test(str)) {
+            // 记录最优座位和其左边座位
+            let code1 = this.data[y][x].code
+            let code2 = this.data[y][x+1].code
+            this.$refs[code1][0].classList.add('yixuan')
+            this.$refs[code2][0].classList.add('yixuan')
+            break
+          } 
+          // 如果到这里,说明当前最高权重座位不符合情况,去寻找第二权重高的座位
+          this.initIndex++
+          this.judge(this.weightSeats,this.initIndex,this.num)
+          break
+          case 3:
+          this.countNum = 3
+          if ((/010/).test(str)) {
+            let code1 = this.data[y][x].code
+            let code2 = this.data[y][x-1].code
+            let code3 = this.data[y][x+1].code
+            this.$refs[code1][0].classList.add('yixuan')
+            this.$refs[code2][0].classList.add('yixuan')
+            this.$refs[code3][0].classList.add('yixuan')
+            break
+          }
+          if ((/001|221/).test(str)) {
+            let code1 = this.data[y][x].code
+            let code2 = this.data[y][x-1].code
+            let code3 = this.data[y][x-2].code
+            this.$refs[code1][0].classList.add('yixuan')
+            this.$refs[code2][0].classList.add('yixuan')
+            this.$refs[code3][0].classList.add('yixuan')
+            break
+          }
+          if ((/100|122/).test(str)) {
+            let code1 = this.data[y][x].code
+            let code2 = this.data[y][x+1].code
+            let code3 = this.data[y][x+2].code
+            this.$refs[code1][0].classList.add('yixuan')
+            this.$refs[code2][0].classList.add('yixuan')
+            this.$refs[code3][0].classList.add('yixuan')
+            break
+          }
+          this.initIndex++
+          this.judge(this.weightSeats,this.initIndex,this.num)
+          break
+          case 4:
+          this.countNum = 4
+          if ((/0010|2210/).test(str)) {
+            let code1 = this.data[y][x].code
+            let code2 = this.data[y][x-1].code
+            let code3 = this.data[y][x-2].code
+            let code4 = this.data[y][x+1].code
+            this.$refs[code1][0].classList.add('yixuan')
+            this.$refs[code2][0].classList.add('yixuan')
+            this.$refs[code3][0].classList.add('yixuan')
+            this.$refs[code4][0].classList.add('yixuan')
+            break
+          }
+          if ((/0100|0122/).test(str)) {
+            let code1 = this.data[y][x].code
+            let code2 = this.data[y][x-1].code
+            let code3 = this.data[y][x+1].code
+            let code4 = this.data[y][x+2].code
+            this.$refs[code1][0].classList.add('yixuan')
+            this.$refs[code2][0].classList.add('yixuan')
+            this.$refs[code3][0].classList.add('yixuan')
+            this.$refs[code4][0].classList.add('yixuan')
+            break
+          }
+          if ((/1000|1022|1220/).test(str)) {
+            let code1 = this.data[y][x].code
+            let code2 = this.data[y][x+1].code
+            let code3 = this.data[y][x+2].code
+            let code4 = this.data[y][x+3].code
+            this.$refs[code1][0].classList.add('yixuan')
+            this.$refs[code2][0].classList.add('yixuan')
+            this.$refs[code3][0].classList.add('yixuan')
+            this.$refs[code4][0].classList.add('yixuan')
+            break
+          }
+          if ((/0001|2201|0221/).test(str)) {
+            let code1 = this.data[y][x].code
+            let code2 = this.data[y][x-1].code
+            let code3 = this.data[y][x-2].code
+            let code4 = this.data[y][x-3].code
+            this.$refs[code1][0].classList.add('yixuan')
+            this.$refs[code2][0].classList.add('yixuan')
+            this.$refs[code3][0].classList.add('yixuan')
+            this.$refs[code4][0].classList.add('yixuan')
+            break
+          }
+          this.initIndex++
+          this.judge(this.weightSeats,this.initIndex,this.num)
+          break
+        }
+        }
+        // 如果最优座位是情侣座的话,
+        if (this.data[y][x].flag === '2') {
+          this.data[y][x].flag = '9'
+          // 获取最优座位所在行拼接的flag字符串--这串代码需要在给最优座位标记之后再执行,-------后面这部分要考虑提取为公共的
+          let str = ''
+          for (let i = 0;i < this.data[y].length;i++) {
+            str += this.data[y][i].flag
+          }
+          console.log(str)
+          switch (num) {
+            case 1:
+            // 因为情侣座位不允许只选一个,所以直接去判断下一个权重的座位
             this.initIndex++
             this.judge(this.weightSeats,this.initIndex,this.num)
             break
-          } else {
-          //  这里说明最优周围没有已售的,可以取到
-            this.containArr.push(this.data[y][i])
+            case 2:
+            this.countNum = 2
+            // 这种情况的话判断 92 29 不过要注意的是2922这种只能是29,不能92
+            if ((/29|2922/).test(str)) {
+              // 记录最优座位和其左边座位
+              let code1 = this.data[y][x].code
+              let code2 = this.data[y][x-1].code
+              this.$refs[code1][0].classList.add('yixuan')
+              this.$refs[code2][0].classList.add('yixuan')
+              break
+            }
+            if ((/92|2292/).test(str)) {
+              // 记录最优座位和其左边座位
+              let code1 = this.data[y][x].code
+              let code2 = this.data[y][x+1].code
+              this.$refs[code1][0].classList.add('yixuan')
+              this.$refs[code2][0].classList.add('yixuan')
+              break
+            }
+            this.initIndex++
+            this.judge(this.weightSeats,this.initIndex,this.num)
+            break
+            case 3:
+            this.countNum = 3
+            // fixme: 这里与之前的
+            if ((/920/).test(str)) {
+              let code1 = this.data[y][x].code
+              let code2 = this.data[y][x+1].code
+              let code3 = this.data[y][x+2].code
+              this.$refs[code1][0].classList.add('yixuan')
+              this.$refs[code2][0].classList.add('yixuan')
+              this.$refs[code3][0].classList.add('yixuan')
+              break
+            }
+            if ((/092|290/).test(str)) {
+              let code1 = this.data[y][x].code
+              let code2 = this.data[y][x+1].code
+              let code3 = this.data[y][x-1].code
+              this.$refs[code1][0].classList.add('yixuan')
+              this.$refs[code2][0].classList.add('yixuan')
+              this.$refs[code3][0].classList.add('yixuan')
+              break
+            }
+            if ((/029/).test(str)) {
+              let code1 = this.data[y][x].code
+              let code2 = this.data[y][x-1].code
+              let code3 = this.data[y][x-2].code
+              this.$refs[code1][0].classList.add('yixuan')
+              this.$refs[code2][0].classList.add('yixuan')
+              this.$refs[code3][0].classList.add('yixuan')
+              break
+            }
+            this.initIndex++
+            this.judge(this.weightSeats,this.initIndex,this.num)
+            break
+            case 4:
+            this.countNum = 4
+            if ((/9200|9222/).test(str)) {
+              let code1 = this.data[y][x].code
+              let code2 = this.data[y][x+1].code
+              let code3 = this.data[y][x+2].code
+              let code4 = this.data[y][x+3].code
+              this.$refs[code1][0].classList.add('yixuan')
+              this.$refs[code2][0].classList.add('yixuan')
+              this.$refs[code3][0].classList.add('yixuan')
+              this.$refs[code4][0].classList.add('yixuan')
+            break
+            }
+            if ((/0920|2922|2900/).test(str)) {
+              let code1 = this.data[y][x].code
+              let code2 = this.data[y][x-1].code
+              let code3 = this.data[y][x+1].code
+              let code4 = this.data[y][x+2].code
+              this.$refs[code1][0].classList.add('yixuan')
+              this.$refs[code2][0].classList.add('yixuan')
+              this.$refs[code3][0].classList.add('yixuan')
+              this.$refs[code4][0].classList.add('yixuan')
+            break
+            }
+            if ((/0092|2292|0290/).test(str)) {
+              let code1 = this.data[y][x].code
+              let code2 = this.data[y][x-1].code
+              let code3 = this.data[y][x-2].code
+              let code4 = this.data[y][x+1].code
+              this.$refs[code1][0].classList.add('yixuan')
+              this.$refs[code2][0].classList.add('yixuan')
+              this.$refs[code3][0].classList.add('yixuan')
+              this.$refs[code4][0].classList.add('yixuan')
+              break
+            }
+            if ((/0029|2229/).test(str)) {
+              let code1 = this.data[y][x].code
+              let code2 = this.data[y][x-1].code
+              let code3 = this.data[y][x-2].code
+              let code4 = this.data[y][x+1].code
+              this.$refs[code1][0].classList.add('yixuan')
+              this.$refs[code2][0].classList.add('yixuan')
+              this.$refs[code3][0].classList.add('yixuan')
+              this.$refs[code4][0].classList.add('yixuan')
+              break
+            }
+            this.initIndex++
+            this.judge(this.weightSeats,this.initIndex,this.num)
+            break
           }
         }
-        console.log(this.containArr)
       }
       },
     created () {
@@ -286,23 +558,14 @@
       // 根据后端
 
     },
-    mounted () {
-      this.makeZoom()
-    //  监听eventbus,根据名,来选择座位个数
-      EventBus.$on('getSeat',(obj) =>{
-        //将传过来的obj的属性值num也挂载在vue上
-        this.num = obj.num
-        //  选择一个最优座位
-        this.getBestSeat()
-      })
-    }
+   
   }
 </script>
 
 <style scoped>
  .seat {
    width: 100%;
-   height: 220px;
+   height: 500px;
    background-color: #ccc;
    display: flex;
    justify-content: center;
