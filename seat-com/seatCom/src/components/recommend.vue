@@ -2,7 +2,7 @@
   <!--推荐选座组件 1人 2人 3人 4人 最多同时4人-->
   <div class="recommend">
     <p class="title">推荐选座</p>
-    <ul class="lis">
+    <ul class="lis clearfix">
       <li @click="getOneSeat">1人座位</li>
       <li @click="getTwoSeat">2人座位</li>
       <li @click="getThreeSeat">3人座位</li>
@@ -33,15 +33,11 @@
 </script>
 
 <style scoped>
-  .recommend {
-    height: 40px;
-  }
+  
   .title {
     font-size: 12px;
   }
-  .lis {
-    height: 100%;
-  }
+  
   .lis li {
     float: left;
     color: #007582;

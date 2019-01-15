@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <p>这里是座位号</p>
-    <span v-for="item in xy">
+    <span v-for="(item,index) in xy" :key="index">
       {{ item[0] }}排{{ item[1] }}座
     </span>
   </div>

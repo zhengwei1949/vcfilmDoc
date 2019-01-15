@@ -3,6 +3,7 @@
     <my-seat></my-seat>
     <my-seatnum></my-seatnum>
     <my-recommend></my-recommend>
+    <my-complete></my-complete>
   </div>
 </template>
 

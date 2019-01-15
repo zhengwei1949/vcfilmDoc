@@ -17,6 +17,7 @@ Vue.prototype.axios = axios
 import Seat from '@/components/seat.vue'
 import SeatNum from '@/components/seatnum.vue'
 import Recommend from '@/components/recommend.vue'
+import Complete from '@/components/complete.vue'
 
 
 Vue.config.productionTip = false
@@ -25,6 +26,7 @@ Vue.config.productionTip = false
 Vue.component('my-seat',Seat)
 Vue.component('my-seatnum',SeatNum)
 Vue.component('my-recommend',Recommend)
+Vue.component('my-complete',Complete)
 
 /* eslint-disable no-new */
 new Vue({
