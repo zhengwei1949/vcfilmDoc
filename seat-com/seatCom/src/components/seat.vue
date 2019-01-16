@@ -95,7 +95,7 @@
         console.log(this.data[1][1])
       },
       handler () {
-        //  处理 datas  把属性data中的cinemaSeatpicDataList(对象)的属性0000000000000001对应的数组中的对象
+        //  处理 datas  把属性data中的cinemaSeatpicDataList(对象)的属性data3---0000000000000001对应的数组中的对象  ---data4 15010
         let arr = JSON.parse(datas).data.cinemaSeatpicDataList['0000000000000001']
         console.log(arr)
       //  得到数组arr,应该遍历,根据y的最大值来创建数组容器个数,再遍历根据x相同时,扔进同一个数组 item.yCoord
@@ -249,7 +249,7 @@
             EventBus.$emit('changeView',{chooseOrNot: false})
           }
           // 点击取消时,还应该把之前设置的flag='1',重新设置为'0',还要把bool设置为false
-          this.data.forEach((item1,index1) => {
+          this.regArr.forEach((item1,index1) => {
             item1.forEach((item2) => {
               if (item2.code === code) {
                 item2.flag = '0'
@@ -274,10 +274,10 @@
             }
           }
           console.log(this.chooseCodes)
-          this.bool = false
+          // this.bool = false
         }else{
           // 在添加已选状态时,为了这个可以联动chooseOk,要根据code判断数组中具体的元素,给其添加flag='1',另外为了chooseOk中可以判断,在此也将用户选中的所在行数也保存起来 --- 此外,将当前code直接push进chooseCodes中
-          this.data.forEach((item1,index1) => {
+          this.regArr.forEach((item1,index1) => {
             item1.forEach((item2) => {
               if (item2.code === code) {
                 item2.flag = '1'
@@ -689,6 +689,8 @@
       },
       // 点击选好了之后,触发的chooseOk()
       chooseOk () {
+        // 修改处:每次点击之前,只要把bool改为false即可
+        this.bool = false
         console.log('chooseCodes')
         console.log(this.chooseCodes)
         /* 用户可能选1,2,3,4次.也就是说页面上拥有状态1的会是1,2,3,4个座位 不过在此之前要给用户自选选座点击事件时添加已选状态,choose()
@@ -702,10 +704,10 @@
         // FIXME:其实下面这部分是可以优化的,只有'自选'情况需要判断,'推荐'因为不可能中间留空,是无需考虑的
         for (let i = 0;i < rows.length;i++) {
           let str = ''
-          this.data[rows[i]].forEach((item) => {
+          this.regArr[rows[i]].forEach((item) => {
             str += item.flag
-            // console.log(str)
           })
+          console.log(str)
           if ((/10[1,3]|[1,3]01/).test(str)) {
             // 为了防止多次触发,设置一个bool值
             this.bool = true
@@ -745,7 +747,7 @@
 <style scoped>
  .seat {
    width: 100%;
-   height: 500px;
+   height: 700px;
    background-color: #ccc;
    display: flex;
    justify-content: center;

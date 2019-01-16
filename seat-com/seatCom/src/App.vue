@@ -4,6 +4,7 @@
     <my-seatnum v-show="chooseOrNot"></my-seatnum>
     <blue-complete v-show="chooseOrNot"></blue-complete>
     <my-recommend v-show="!chooseOrNot"></my-recommend>
+    <grey-complete v-show="!chooseOrNot"></grey-complete>
   </div>
 </template>
 

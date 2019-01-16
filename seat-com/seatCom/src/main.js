@@ -18,7 +18,7 @@ import Seat from '@/components/seat.vue'
 import SeatNum from '@/components/seatnum.vue'
 import Recommend from '@/components/recommend.vue'
 import blueComplete from '@/components/blueComplete.vue'
-// import greyComplete from '@/components/greyComplete.vue'
+import greyComplete from '@/components/greyComplete.vue'
 
 
 Vue.config.productionTip = false
@@ -28,6 +28,7 @@ Vue.component('my-seat',Seat)
 Vue.component('my-seatnum',SeatNum)
 Vue.component('my-recommend',Recommend)
 Vue.component('blue-complete',blueComplete)
+Vue.component('grey-complete',greyComplete)
 
 /* eslint-disable no-new */
 new Vue({

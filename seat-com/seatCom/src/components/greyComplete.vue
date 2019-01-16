@@ -16,19 +16,25 @@ export default {
 <style lang="less" scoped>
 .container {
   display: flex;
-  p {
+  margin-top: 30px;
+  >p {
     color: #717171;
     font-size: 14px;
     flex: 1;
+    display: flex;
+    align-items: center;
   }
-  div {
+  >div {
     width: 90px;
     height: 32px;
-    a {
+    line-height: 32px;
+    margin-right: 20px;
+    >a {
       width: 100%;
       height: 100%;
-      color: #fff;
+      background-color: #ccc;
       text-align: center;
+      border-radius: 10px;
       display: block;
     }
   }

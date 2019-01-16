@@ -55,9 +55,17 @@
   }
 </script>
 
-<style scoped>
+<style lang="less" scoped>
 .container {
-  height: 50px;
+  height: 80px;
   margin-top: 10px;
+  span {
+    background-color: #eee;
+    color: #00bcd4;
+    display: inline-block;
+    margin: .5em;
+    border-radius: 3px;
+    padding: .2em;
+  }
 }
 </style>

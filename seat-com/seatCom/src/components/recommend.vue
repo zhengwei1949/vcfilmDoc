@@ -37,7 +37,9 @@
 </script>
 
 <style scoped>
-  
+  .recommend {
+    height: 80px;
+  }
   .title {
     font-size: 16px;
   }
@@ -46,7 +48,7 @@
     float: left;
     color: #007582;
     background-color: #eee;
-    margin: 5px;
+    margin: 10px;
     border-radius: 3px;
     padding: 2px;
 
