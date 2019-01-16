@@ -1,15 +1,27 @@
 <template>
   <div id="app">
     <my-seat></my-seat>
-    <my-seatnum></my-seatnum>
-    <my-recommend></my-recommend>
-    <my-complete></my-complete>
+    <my-seatnum v-show="chooseOrNot"></my-seatnum>
+    <blue-complete v-show="chooseOrNot"></blue-complete>
+    <my-recommend v-show="!chooseOrNot"></my-recommend>
   </div>
 </template>
 
 <script>
+import { EventBus } from './eventbus.js'
 export default {
-  name: 'App'
+  name: 'App',
+  data () {
+    return {
+      chooseOrNot: false
+    }
+  },
+  mounted () {
+    // 监听,
+    EventBus.$on('changeView',(obj) => {
+      this.chooseOrNot = obj.chooseOrNot
+    })
+  }
 }
 </script>
 

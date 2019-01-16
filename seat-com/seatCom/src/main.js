@@ -17,7 +17,8 @@ Vue.prototype.axios = axios
 import Seat from '@/components/seat.vue'
 import SeatNum from '@/components/seatnum.vue'
 import Recommend from '@/components/recommend.vue'
-import Complete from '@/components/complete.vue'
+import blueComplete from '@/components/blueComplete.vue'
+// import greyComplete from '@/components/greyComplete.vue'
 
 
 Vue.config.productionTip = false
@@ -26,7 +27,7 @@ Vue.config.productionTip = false
 Vue.component('my-seat',Seat)
 Vue.component('my-seatnum',SeatNum)
 Vue.component('my-recommend',Recommend)
-Vue.component('my-complete',Complete)
+Vue.component('blue-complete',blueComplete)
 
 /* eslint-disable no-new */
 new Vue({

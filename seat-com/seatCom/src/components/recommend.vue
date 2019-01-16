@@ -18,15 +18,19 @@
     methods: {
       getOneSeat () {
         EventBus.$emit('getSeat',{num: 1})
+        EventBus.$emit('changeView',{chooseOrNot: true})
       },
       getTwoSeat () {
         EventBus.$emit('getSeat',{num: 2})
+        EventBus.$emit('changeView',{chooseOrNot: true})
       },
       getThreeSeat () {
         EventBus.$emit('getSeat',{num: 3})
+        EventBus.$emit('changeView',{chooseOrNot: true})
       },
       getFourSeat () {
         EventBus.$emit('getSeat',{num: 4})
+        EventBus.$emit('changeView',{chooseOrNot: true})
       },
     }
   }
@@ -35,7 +39,7 @@
 <style scoped>
   
   .title {
-    font-size: 12px;
+    font-size: 16px;
   }
   
   .lis li {

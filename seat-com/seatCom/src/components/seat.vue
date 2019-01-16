@@ -54,8 +54,11 @@
         num: null,
         // 存储找到的推荐座位
         containArr: [],
-        // 存储自选座位时所在行数 choose()保存 chooseOk使用
+        // 存储选座座位时的所在行数   choose()保存 chooseOk使用 
         chooseRows: [],
+        // 存储选座座位的code 为了chooseOk中直接使用
+        chooseCodes: [],
+        // 为了'不能留有空位'消息的多次触发,设置一个boolean值用于判断
         bool: false,
         // 因为推荐座位是可以跨过道的,所以要在resultArr中添加对象前,对resultArr进行一个深拷贝,下面数组是为推荐算法中正则表达式判断准备的---不包含过道
         // 为什么推荐座位要舍弃过道? 假如推荐正则是0010,而如果使用data数组,匹配正则可能会是0undefined010导致匹配错误
@@ -76,6 +79,14 @@
       // 监听'选好了'事件
       EventBus.$on('chooseOk',() => {
         this.chooseOk()
+      })
+      // 监听'清除已选状态'事件 ---seatnum.vue
+      EventBus.$on('destroyYiXuan',(obj) => {
+        // 获取code
+        let code = obj.code
+        this.$refs[code][0].classList.remove('yixuan')
+        // 将this.countNum--
+        this.countNum--
       })
     },
     methods: {
@@ -208,9 +219,16 @@
           return
         }
         console.log(this.$refs[code])
-        const target = this.$refs[code][0].classList
-        //得到的seatnum是个字符串,将其转为数组
-        const seatNum = this.$refs[code][0].dataset.seatnum.split(',')
+        // 触发eventbus,修改 视图
+        EventBus.$emit('changeView',{chooseOrNot: true})
+        let target = this.$refs[code][0].classList
+        //得到的seatnum是个字符串,将其转为数组 --- 为了方便seatnum.vue在向seat.vue传递信息时,方便seat.vue修改'yixuan'状态,将当前code也push进去
+        let seatNum = this.$refs[code][0].dataset.seatnum.split(',')
+        seatNum.push(code)
+        // FIXME:定义一个空数组,将seatNum存入 --- 为了跟'推荐座位'保持一致,需要eventBus传递的是二维数组,因为推荐座位可能有多个
+        // let seatNum = []
+        // seatNum.push(seatArr)
+
         // 判断:如果已经有'yishou'的类名,则直接return
         if (target.contains('yishou')) {
           return
@@ -226,13 +244,17 @@
             seatNum
           })
           this.countNum--
+          // 取消已选状态时,判断countNum是否为0,如果等于0,则通知app.vue,更新视图
+          if (this.countNum === 0) {
+            EventBus.$emit('changeView',{chooseOrNot: false})
+          }
           // 点击取消时,还应该把之前设置的flag='1',重新设置为'0',还要把bool设置为false
           this.data.forEach((item1,index1) => {
             item1.forEach((item2) => {
               if (item2.code === code) {
                 item2.flag = '0'
                 // this.chooseRows.push(index1)
-                // 当用户自选点击取消时,从chooseRows中,删除一个等于index1的元素,无关索引,只要删除一个就行
+                // 当用户自选点击取消时,从chooseRows中,删除一个等于code的元素
                 for (let i = 0;i < this.chooseRows.length;i++) {
                   if (this.chooseRows[i] === index1) {
                     this.chooseRows.splice(i,1)
@@ -241,12 +263,20 @@
                 }
                 console.log('pull')
                 console.log(this.chooseRows)
+                 
               }
             })
-          }) 
+          })
+          // 点击取消时,要把之前push进chooseCodes中的code再删除掉
+          for (let i = 0;i < this.chooseCodes.length;i++) {
+            if (this.chooseCodes[i] === code) {
+              this.chooseCodes.splice(i,1)
+            }
+          }
+          console.log(this.chooseCodes)
           this.bool = false
         }else{
-          // 在添加已选状态时,为了这个可以联动chooseOk,要根据code判断数组中具体的元素,给其添加flag='1',另外为了chooseOk中可以判断,在此也将用户选中的所在行数也保存起来
+          // 在添加已选状态时,为了这个可以联动chooseOk,要根据code判断数组中具体的元素,给其添加flag='1',另外为了chooseOk中可以判断,在此也将用户选中的所在行数也保存起来 --- 此外,将当前code直接push进chooseCodes中
           this.data.forEach((item1,index1) => {
             item1.forEach((item2) => {
               if (item2.code === code) {
@@ -257,6 +287,8 @@
               }
             })
           })
+          this.chooseCodes.push(code)
+          console.log(this.chooseCodes)
           target.add('yixuan')
           // 选中时,通过data-seatnum 取出当前座位号
           // console.log(seatNum[0])
@@ -329,10 +361,24 @@
         })
         return resultArr
         },
+
+      // 推荐座位传递座位号 ---调用该方法,参数是code,每个座位的座位号都是个数组,然后将这些数组push进一个空数组中,得到二维数组
+      getSeatNum (...args) {
+        console.log(args)
+        let seatArr = []
+        args.forEach((item) => {
+          const seatNum = this.$refs[item][0].dataset.seatnum.split(',')
+          seatNum.push(item)
+          seatArr.unshift(seatNum)
+        })
+        return seatArr
+      },
       // 递归判断 是否最大权重的座位周围的个数满足推荐的座位数  参数是权重数组的第一项        判断this.data
       judge (weightSeats,index,num) {
         // 每次递归开始前,将chooseRows中的内容清空
         this.chooseRows = []
+        // 将chooseCodes中的内容也清空
+        this.chooseCodes = []
         // FIXME: 如果传过来的index的值,大于等于了weightSeats.length,则表示无可推荐座位,直接return ---整个推荐算法后续可以考虑优化
         if (index >= weightSeats.length) {
           return console.log('无可推荐座位')
@@ -350,7 +396,8 @@
           }
         }
         // 找到最优座位时,为了'选好了'按钮,记录其所在行,将其保存在this.chooseRows中
-        this.chooseRows.push(y) 
+        this.chooseRows.push(y)
+
         // 给当前最优座位best(不是情侣座)加上 flag:'1', 因为weightSeats是权重数组,而我们下面要操作是原始二维数组,所以不能直接给weightSeats[index]设置flag
         if (this.regArr[y][x].flag !== '2') {
         this.regArr[y][x].flag = '1'
@@ -369,6 +416,12 @@
           // 1.直接拿最优座位即可,无需正则表达式,拿到当前对应数据中的属性code,设置code,
           let code = this.regArr[y][x].code
           this.$refs[code][0].classList.add('yixuan')
+          this.chooseCodes.push(code)
+          console.log('触发---')
+          console.log(this.getSeatNum(code))
+          console.log('触发---')
+          EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code)}) 
+
           break
           case 2:
           this.countNum = 2
@@ -379,6 +432,8 @@
             let code2 = this.regArr[y][x-1].code
             this.$refs[code1][0].classList.add('yixuan')
             this.$refs[code2][0].classList.add('yixuan')
+            this.chooseCodes.push(code1,code2)
+            EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2)})
             break
           }
           if ((/10/).test(str)) {
@@ -387,6 +442,8 @@
             let code2 = this.regArr[y][x+1].code
             this.$refs[code1][0].classList.add('yixuan')
             this.$refs[code2][0].classList.add('yixuan')
+            this.chooseCodes.push(code1,code2)
+            EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2)})
             break
           } 
           // 如果到这里,说明当前最高权重座位不符合情况,去寻找第二权重高的座位
@@ -402,6 +459,8 @@
             this.$refs[code1][0].classList.add('yixuan')
             this.$refs[code2][0].classList.add('yixuan')
             this.$refs[code3][0].classList.add('yixuan')
+            this.chooseCodes.push(code1,code2,code3)
+            EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3)})
             break
           }
           if ((/001|221/).test(str)) {
@@ -411,6 +470,8 @@
             this.$refs[code1][0].classList.add('yixuan')
             this.$refs[code2][0].classList.add('yixuan')
             this.$refs[code3][0].classList.add('yixuan')
+            this.chooseCodes.push(code1,code2,code3)
+            EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3)})
             break
           }
           if ((/100|122/).test(str)) {
@@ -420,6 +481,8 @@
             this.$refs[code1][0].classList.add('yixuan')
             this.$refs[code2][0].classList.add('yixuan')
             this.$refs[code3][0].classList.add('yixuan')
+            this.chooseCodes.push(code1,code2,code3)
+            EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3)})
             break
           }
           this.initIndex++
@@ -436,6 +499,8 @@
             this.$refs[code2][0].classList.add('yixuan')
             this.$refs[code3][0].classList.add('yixuan')
             this.$refs[code4][0].classList.add('yixuan')
+            this.chooseCodes.push(code1,code2,code3,code4)
+            EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3,code4)})
             break
           }
           if ((/0100|0122/).test(str)) {
@@ -447,6 +512,8 @@
             this.$refs[code2][0].classList.add('yixuan')
             this.$refs[code3][0].classList.add('yixuan')
             this.$refs[code4][0].classList.add('yixuan')
+            this.chooseCodes.push(code1,code2,code3,code4)
+            EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3,code4)})
             break
           }
           if ((/1000|1022|1220/).test(str)) {
@@ -458,6 +525,8 @@
             this.$refs[code2][0].classList.add('yixuan')
             this.$refs[code3][0].classList.add('yixuan')
             this.$refs[code4][0].classList.add('yixuan')
+            this.chooseCodes.push(code1,code2,code3,code4)
+            EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3,code4)})
             break
           }
           if ((/0001|2201|0221/).test(str)) {
@@ -469,6 +538,8 @@
             this.$refs[code2][0].classList.add('yixuan')
             this.$refs[code3][0].classList.add('yixuan')
             this.$refs[code4][0].classList.add('yixuan')
+            this.chooseCodes.push(code1,code2,code3,code4)
+            EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3,code4)})
             break
           }
           this.initIndex++
@@ -500,6 +571,8 @@
               let code2 = this.regArr[y][x-1].code
               this.$refs[code1][0].classList.add('yixuan')
               this.$refs[code2][0].classList.add('yixuan')
+              this.chooseCodes.push(code1,code2)
+              EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2)})
               break
             }
             if ((/92|2292/).test(str)) {
@@ -508,6 +581,8 @@
               let code2 = this.regArr[y][x+1].code
               this.$refs[code1][0].classList.add('yixuan')
               this.$refs[code2][0].classList.add('yixuan')
+              this.chooseCodes.push(code1,code2)
+              EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2)})
               break
             }
             this.initIndex++
@@ -523,6 +598,8 @@
               this.$refs[code1][0].classList.add('yixuan')
               this.$refs[code2][0].classList.add('yixuan')
               this.$refs[code3][0].classList.add('yixuan')
+              this.chooseCodes.push(code1,code2,code3)
+              EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3)})
               break
             }
             if ((/092|290/).test(str)) {
@@ -532,6 +609,8 @@
               this.$refs[code1][0].classList.add('yixuan')
               this.$refs[code2][0].classList.add('yixuan')
               this.$refs[code3][0].classList.add('yixuan')
+              this.chooseCodes.push(code1,code2,code3)
+              EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3)})
               break
             }
             if ((/029/).test(str)) {
@@ -541,6 +620,8 @@
               this.$refs[code1][0].classList.add('yixuan')
               this.$refs[code2][0].classList.add('yixuan')
               this.$refs[code3][0].classList.add('yixuan')
+              this.chooseCodes.push(code1,code2,code3)
+              EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3)})
               break
             }
             this.initIndex++
@@ -557,6 +638,8 @@
               this.$refs[code2][0].classList.add('yixuan')
               this.$refs[code3][0].classList.add('yixuan')
               this.$refs[code4][0].classList.add('yixuan')
+              this.chooseCodes.push(code1,code2,code3,code4)
+              EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3,code4)})
             break
             }
             if ((/0920|2922|2900/).test(str)) {
@@ -568,6 +651,8 @@
               this.$refs[code2][0].classList.add('yixuan')
               this.$refs[code3][0].classList.add('yixuan')
               this.$refs[code4][0].classList.add('yixuan')
+              this.chooseCodes.push(code1,code2,code3,code4)
+              EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3,code4)})
             break
             }
             if ((/0092|2292|0290/).test(str)) {
@@ -579,6 +664,8 @@
               this.$refs[code2][0].classList.add('yixuan')
               this.$refs[code3][0].classList.add('yixuan')
               this.$refs[code4][0].classList.add('yixuan')
+              this.chooseCodes.push(code1,code2,code3,code4)
+              EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3,code4)})
               break
             }
             if ((/0029|2229/).test(str)) {
@@ -590,6 +677,8 @@
               this.$refs[code2][0].classList.add('yixuan')
               this.$refs[code3][0].classList.add('yixuan')
               this.$refs[code4][0].classList.add('yixuan')
+              this.chooseCodes.push(code1,code2,code3,code4)
+              EventBus.$emit('getSeatNum',{seatNum: this.getSeatNum(code1,code2,code3,code4)})
               break
             }
             this.initIndex++
@@ -600,6 +689,8 @@
       },
       // 点击选好了之后,触发的chooseOk()
       chooseOk () {
+        console.log('chooseCodes')
+        console.log(this.chooseCodes)
         /* 用户可能选1,2,3,4次.也就是说页面上拥有状态1的会是1,2,3,4个座位 不过在此之前要给用户自选选座点击事件时添加已选状态,choose()
           用户自选座位所在行数被保存在了chooseRows,进行一个数组去重
         */
@@ -608,6 +699,7 @@
         }
         let rows = [...new Set(this.chooseRows)]
         console.log(rows)
+        // FIXME:其实下面这部分是可以优化的,只有'自选'情况需要判断,'推荐'因为不可能中间留空,是无需考虑的
         for (let i = 0;i < rows.length;i++) {
           let str = ''
           this.data[rows[i]].forEach((item) => {
@@ -623,7 +715,8 @@
         if (this.bool) {
           return console.log('座位之间不能留空一个座位')
         }
-        // 到达这里说明,用户自选选座符合规则; 推荐座位也要走这里的逻辑,这里要做的就是把已选座位的code拿到
+        // TODO:到达这里说明,用户自选选座符合规则; 推荐座位也要走这里的逻辑,这里要做的就是把已选座位的code拿到---已被存储在chooseCodes中
+
 
       }
       },
