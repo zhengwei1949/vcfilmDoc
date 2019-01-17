@@ -16,7 +16,7 @@ export default {
 <style lang="less" scoped>
 .container {
   display: flex;
-  margin-top: 30px;
+  margin-top: 10px;
   >p {
     color: #717171;
     font-size: 14px;
