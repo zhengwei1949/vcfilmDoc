@@ -52,14 +52,15 @@
         initIndex: 0,
         //将传过来的obj的属性值num也挂载在vue上, num指的是推荐座位按钮具体的数据(比如是1,2,3,4)
         num: null,
-        // 存储找到的推荐座位
-        containArr: [],
+        // 存储找到的推荐座位---根据点击的推荐座位数量,数组长度不同----这个containArr好像没有用到过
+        // containArr: [],
         // 存储选座座位时的所在行数   choose()保存 chooseOk使用 
         chooseRows: [],
         // 存储选座座位的code 为了chooseOk中直接使用
         chooseCodes: [],
-        // 为了'不能留有空位'消息的多次触发,设置一个boolean值用于判断
+        // 为了'不能留有空位'消息的多次触发,设置一个boolean值用于判断---为了判断是否单选情侣座,设置coupleBool
         bool: false,
+        coupleBool: false,
         // 因为推荐座位是可以跨过道的,所以要在resultArr中添加对象前,对resultArr进行一个深拷贝,下面数组是为推荐算法中正则表达式判断准备的---不包含过道
         // 为什么推荐座位要舍弃过道? 假如推荐正则是0010,而如果使用data数组,匹配正则可能会是0undefined010导致匹配错误
         regArr: null
@@ -88,6 +89,8 @@
         this.countNum--
         // 初始化initIndex
         this.initIndex = 0
+        // 调用自选与取消座位号之间的公共函数---cancelSeat
+        this.cancelSeat(code)
       })
     },
     methods: {
@@ -256,25 +259,7 @@
             EventBus.$emit('changeView',{chooseOrNot: false})
           }
           // 点击取消时,还应该把之前设置的flag='1',重新设置为'0',还要把bool设置为false
-          this.regArr.forEach((item1,index1) => {
-            item1.forEach((item2) => {
-              if (item2.code === code) {
-                // FIXME:item2.flag = '0'  ---这里要注意,因为推荐选座也会走这个逻辑,不能直接再将flag设置为'0',因为可能点击的会是情侣座
-                this.$refs[code][0].classList.contains('qinglv')?(item2.flag = '2'):(item2.flag = '0')
-                // this.chooseRows.push(index1)
-                // 当用户自选点击取消时,从chooseRows中,删除一个等于code的元素
-                for (let i = 0;i < this.chooseRows.length;i++) {
-                  if (this.chooseRows[i] === index1) {
-                    this.chooseRows.splice(i,1)
-                    break
-                  }
-                }
-                console.log('pull')
-                console.log(this.chooseRows)
-                 
-              }
-            })
-          })
+          this.cancelSeat(code)
           // 点击取消时,要把之前push进chooseCodes中的code再删除掉
           for (let i = 0;i < this.chooseCodes.length;i++) {
             if (this.chooseCodes[i] === code) {
@@ -291,8 +276,9 @@
                 // 取消的时候是根据是否情侣来设置flag是0或1,那么添加的时候自然也是要设置flag为1或者8
                 this.$refs[code][0].classList.contains('qinglv')?(item2.flag = '8'):(item2.flag = '1')
                 this.chooseRows.push(index1)
-                console.log('push')
+                console.log('push---')
                 console.log(this.chooseRows)
+                console.log('push---')
               }
             })
           })
@@ -308,6 +294,26 @@
           })
           this.countNum++
         }
+      },
+      cancelSeat (code) {
+        this.regArr.forEach((item1,index1) => {
+            item1.forEach((item2) => {
+              if (item2.code === code) {
+                // FIXME:item2.flag = '0'  ---这里要注意,因为推荐选座也会走这个逻辑,不能直接再将flag设置为'0',因为可能点击的会是情侣座
+                this.$refs[code][0].classList.contains('qinglv')?(item2.flag = '2'):(item2.flag = '0')
+                // this.chooseRows.push(index1)
+                // 当用户自选点击取消时,从chooseRows中,删除一个等于code的元素
+                for (let i = 0;i < this.chooseRows.length;i++) {
+                  if (this.chooseRows[i] === index1) {
+                    this.chooseRows.splice(i,1)
+                    break
+                  }
+                }
+                console.log('pull')
+                console.log(this.chooseRows)
+              }
+            })
+          })
       },
       //fixme:移动端缩放
       makeZoom () {
@@ -331,11 +337,11 @@
         // 遍历数组,筛选最大权重的座位  ---拿到最大权重的对象中的code属性,根据这个属性给页面中的对应元素设置背景图,排除掉已售,计算属性
         console.log('选择最优座位')
         // fixme:如果用户自选之后,点击推荐  (实际上自选与推荐是不能同时发生的)
-        //得到从大到小的权重数组-- 一维数组
-        this.weightSeats = this.sortWeight(this.noyishouData)
-        console.log(this.weightSeats)
+        //得到从大到小的权重数组-- 一维数组 ---不应该在每次点击都去重新排序权重,而是在得到noyishouData之后就进行
+        // this.weightSeats = this.sortWeight(this.noyishouData)
+        
         //每次点击推荐时,都把containArr的元素来清除一下
-        this.containArr = []
+        // this.containArr = []
         //默认从0开始遍历,传入一个initIndex
         this.judge(this.weightSeats,this.initIndex,this.num)
       },
@@ -740,8 +746,9 @@
       },
       // 点击选好了之后,触发的chooseOk()
       chooseOk () {
-        // 修改处:每次点击之前,只要把bool改为false即可
+        // 修改处:每次点击之前,只要把bool改为false即可---加上coupleBool
         this.bool = false
+        this.coupleBool = false
         console.log('chooseCodes')
         console.log(this.chooseCodes)
         console.log(this.chooseRows)
@@ -760,17 +767,25 @@
             str += item.flag
           })
           console.log(str)
-          if ((/10[1,2,3]|[1,2,3]01|82[8,3,9]|[8,3,9]28/).test(str)) {
+          if ((/10[1,2,3]|[1,2,3]01|82[1,3,8,9]|[1,3,8,9]28/).test(str)) {
             // 为了防止多次触发,设置一个bool值
             this.bool = true
+          }
+          // 判断情侣座是否单选
+          if ((/8/).test(str)&&!(/88/).test(str)) {
+            this.coupleBool = true
           }
 
         }
         if (this.bool) {
           return console.log('座位之间不能留空一个座位')
         }
-
         //情侣座不允许单选
+        if (this.coupleBool) {
+          return console.log('请不要单选情侣座')
+        }
+
+        
 
         // TODO:到达这里说明,用户自选选座符合规则; 推荐座位也要走这里的逻辑,这里要做的就是把已选座位的code拿到---已被存储在chooseCodes中
 
@@ -790,9 +805,14 @@
           }
         })
       })
+      console.log('noyishouData----')
       console.log(this.noyishouData)
-      // 根据后端
-
+      console.log('noyishouData----')
+      // 清除掉已售数据后,将剩余的座位按照权重排序,存储在weightArr中
+      this.weightSeats = this.sortWeight(this.noyishouData)
+      console.log('weightSeats----')
+      console.log(this.weightSeats)
+      console.log('weightSeats----')
     },
    
   }
