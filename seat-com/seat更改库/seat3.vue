@@ -12,8 +12,8 @@
       <!--红色虚线-->
       <div class="mid_line"></div>
       <!--左侧提示行数-->
-      <div>
-        <ul class="get_rows">
+      <div class="get_rows">
+        <ul>
           <li v-for="(num,index) in rows" :key="index">{{ typeof(num)==='number'?(num+1):'' }}</li>
         </ul>
       </div>
@@ -22,13 +22,13 @@
 </template>
 
 <script>
-  import datas from '@/assets/data3.js'
+  import datas from '@/assets/data4.js'
   console.log(JSON.parse(datas).data)
   import { EventBus } from '../eventbus.js'
   import AlloyFinger from 'alloyfinger'
   // 导入iscroll-zoom.js
   import IScroll from '@/assets/iscroll-zoom.js'
-  console.log(AlloyFinger)
+  // console.log(AlloyFinger)
   export default {
     name: 'seat',
     data () {
@@ -124,7 +124,7 @@
       // 1.处理数据---排序,设置权重,创建过道,深拷贝,权重排序
       handler () {
         //  处理 datas  把属性data中的cinemaSeatpicDataList(对象)的属性data3---0000000000000001对应的数组中的对象  ---data4 15010
-        let arr = JSON.parse(datas).data.cinemaSeatpicDataList['0000000000000001']
+        let arr = JSON.parse(datas).data.cinemaSeatpicDataList['15010']
         console.log(arr)
         //  得到数组arr,应该遍历,根据y的最大值来创建数组容器个数,再遍历根据x相同时,扔进同一个数组 item.yCoord
         let ylist = []
@@ -387,22 +387,6 @@
           mouseWheel: true,
           wheelAction: 'zoom'
         })
-        console.log(myScroll.zoom)
-        // zoom(scale,x,y,time)---scale缩放度(根据距离确定),x y中心坐标(根据touch接触点确定),time时间
-        // let af = new AlloyFinger()
-        var seats = document.getElementsByClassName("seats")[0];
-        // Transform(seats);
-        var initScale = 1;
-        new AlloyFinger(seats, {
-            multipointStart: function () {
-                initScale = seats.scaleX;
-            },
-            pinch: function (evt) {
-                console.log(evt)
-                seats.scaleX = seats.scaleY = initScale * evt.zoom;
-            }
-        });
-
       },
       // 选择最优座位
       /*getBestSeat () {
@@ -686,7 +670,7 @@
 <style scoped>
  .seat {
    width: 100%;
-   height: 650px;
+   height: 700px;
    background-color: #ccc;
    display: flex;
    justify-content: center;
@@ -721,7 +705,7 @@
  }
  .get_rows {
    position: absolute;
-   top: 0;
+   top: -20px;
    left: -10px;
    background-color: rgba(0,0,0,0.5);
    border-radius: 10px;
@@ -757,6 +741,6 @@
   /* iscroll */
  .seats {
    /* -- Attention: This line is extremely important in chrome 55+! -- */
-   /* touch-action: none; */
+   touch-action: none;
  }
 </style>

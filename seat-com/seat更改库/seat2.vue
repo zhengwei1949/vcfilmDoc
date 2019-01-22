@@ -12,8 +12,8 @@
       <!--红色虚线-->
       <div class="mid_line"></div>
       <!--左侧提示行数-->
-      <div>
-        <ul class="get_rows">
+      <div class="get_rows">
+        <ul>
           <li v-for="(num,index) in rows" :key="index">{{ typeof(num)==='number'?(num+1):'' }}</li>
         </ul>
       </div>
@@ -22,13 +22,11 @@
 </template>
 
 <script>
-  import datas from '@/assets/data3.js'
+  import datas from '@/assets/data4.js'
   console.log(JSON.parse(datas).data)
   import { EventBus } from '../eventbus.js'
   import AlloyFinger from 'alloyfinger'
-  // 导入iscroll-zoom.js
-  import IScroll from '@/assets/iscroll-zoom.js'
-  console.log(AlloyFinger)
+  // console.log(AlloyFinger)
   export default {
     name: 'seat',
     data () {
@@ -69,7 +67,6 @@
       }
     },
     created () {
-      // 在进行handler之后,this.data中存储的会是所有规整的数据
       this.handler()
       //fixme:forEach没有返回值,暂时考虑使用深拷贝复制没有已售座位的数据
       //todo:深拷贝得到所有数据,再将已售的数据进行剔除---接下来就可以进行直接遍历找到最大权重的数据
@@ -85,7 +82,7 @@
       console.log('noyishouData----')
       console.log(this.noyishouData)
       console.log('noyishouData----')
-      // 清除掉已售数据后,将剩余的座位按照权重排序,存储在weightSeats中
+      // 清除掉已售数据后,将剩余的座位按照权重排序,存储在weightArr中
       this.weightSeats = this.sortWeight(this.noyishouData)
       console.log('weightSeats----')
       console.log(this.weightSeats)
@@ -124,7 +121,7 @@
       // 1.处理数据---排序,设置权重,创建过道,深拷贝,权重排序
       handler () {
         //  处理 datas  把属性data中的cinemaSeatpicDataList(对象)的属性data3---0000000000000001对应的数组中的对象  ---data4 15010
-        let arr = JSON.parse(datas).data.cinemaSeatpicDataList['0000000000000001']
+        let arr = JSON.parse(datas).data.cinemaSeatpicDataList['15010']
         console.log(arr)
         //  得到数组arr,应该遍历,根据y的最大值来创建数组容器个数,再遍历根据x相同时,扔进同一个数组 item.yCoord
         let ylist = []
@@ -162,11 +159,9 @@
         // 由于x顺序不规则,所以要将x重新按照从小到大的顺序进行排列---这一步完成之后就是规整的数据了
         resultArr.forEach((item) => {
           for (let n = 0;n < item.length; n++) {
-            this.bubbleSort(item)
+            this.sort(item)
           }
         })
-        console.log('resultArr')
-        console.log(resultArr)
         //增加x权重 ---设置rows是为了测试了下data4
         resultArr.forEach((item,index) => {
           this.setXWeight(item)
@@ -202,19 +197,15 @@
         console.log(resultArr)
       },
       // 排序
-      bubbleSort (arr) {
-        let sign
-        for (let i=0; i<arr.length-1; i++) {
-          sign = false
+      sort (arr) {
+        for (let i=0; i<arr.length-1; i++){
           for (let j=0; j<arr.length-i-1; j++){
             if (Number(arr[j].xCoord) > (Number(arr[j+1].xCoord))) {
-              let oldVal = arr[j]
-              arr[j] = arr[j+1]
-              arr[j+1] = oldVal
-              sign = true
+              let oldVal = arr[j];
+              arr[j] = arr[j+1];
+              arr[j+1] = oldVal;
             }
           }
-          if (!sign) break
         }
       },
       // 设置x权重函数
@@ -379,30 +370,20 @@
       },
       //fixme:移动端缩放
       makeZoom () {
-        let myScroll = new IScroll('.seats',{
-          zoom: true,
-          zoomMax: 1.5,
-          scrollX: true,
-          scrollY: true,
-          mouseWheel: true,
-          wheelAction: 'zoom'
+        const seats = document.getElementsByClassName('seats')[0]
+        const initScale = 1
+        const af = new AlloyFinger(seats,{
+          touchStart () {
+            // console.log('touchStart')
+          },
+          tap (e) {
+            // console.log(e)
+            // console.log('tap')
+          },
+          pinch(e) {
+            seats.scaleX = seats.scaleY = initScale * e.scale;
+          },
         })
-        console.log(myScroll.zoom)
-        // zoom(scale,x,y,time)---scale缩放度(根据距离确定),x y中心坐标(根据touch接触点确定),time时间
-        // let af = new AlloyFinger()
-        var seats = document.getElementsByClassName("seats")[0];
-        // Transform(seats);
-        var initScale = 1;
-        new AlloyFinger(seats, {
-            multipointStart: function () {
-                initScale = seats.scaleX;
-            },
-            pinch: function (evt) {
-                console.log(evt)
-                seats.scaleX = seats.scaleY = initScale * evt.zoom;
-            }
-        });
-
       },
       // 选择最优座位
       /*getBestSeat () {
@@ -661,24 +642,27 @@
             str += item.flag
           })
           console.log(str)
-          if ((/10[1,2,3,9]|[1,2,3,9]01/).test(str)) {
+          if ((/10[1,2,3,9]|[1,2,3,9]01|92[0,1,3,9]|[0,1,3,9]29/).test(str)) {
             // 为了防止多次触发,设置一个bool值
             this.bool = true
           }
           // 判断情侣座是否单选
-          if ((/9/).test(str)&&!(/99/).test(str)||(/92[0,1,3,9]|[0,1,3,9]29/).test(str)) {
+          if ((/9/).test(str)&&!(/99/).test(str)) {
             this.coupleBool = true
           }
+          // if ((/92[1,2,3,9]|[1,2,3,9]01|82[1,3,8,9]|[1,3,8,9]28/).test(str)) {
+          //   this.coupleBool = true
+          // }
+        }
+        if (this.bool) {
+          return console.log('座位之间不能留空一个座位')
         }
         //情侣座不允许单选
         if (this.coupleBool) {
           return console.log('请不要单选情侣座')
         }
-        if (this.bool) {
-          return console.log('座位之间不能留空一个座位')
-        }
         // TODO:到达这里说明,用户自选选座符合规则; 推荐座位也要走这里的逻辑,这里要做的就是把已选座位的code拿到---已被存储在chooseCodes中
-      }
+      },
     },
   }
 </script>
@@ -686,12 +670,11 @@
 <style scoped>
  .seat {
    width: 100%;
-   height: 650px;
+   height: 700px;
    background-color: #ccc;
    display: flex;
    justify-content: center;
    align-items: center;
-   overflow: hidden;
  }
  .container {
    position: relative;
@@ -721,7 +704,7 @@
  }
  .get_rows {
    position: absolute;
-   top: 0;
+   top: -20px;
    left: -10px;
    background-color: rgba(0,0,0,0.5);
    border-radius: 10px;
@@ -757,6 +740,6 @@
   /* iscroll */
  .seats {
    /* -- Attention: This line is extremely important in chrome 55+! -- */
-   /* touch-action: none; */
+   touch-action: none;
  }
 </style>

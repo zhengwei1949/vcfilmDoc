@@ -13,7 +13,12 @@
   "dependencies": {
     "alloyfinger": "^0.1.16",
     "axios": "^0.18.0",
+    "cssnano": "^4.1.8",
     "iscroll": "^5.2.0",
+    "postcss-aspect-ratio-mini": "^1.0.1",
+    "postcss-cssnext": "^3.1.0",
+    "postcss-px-to-viewport": "0.0.3",
+    "postcss-write-svg": "^3.0.1",
     "vue": "^2.5.2",
     "vue-draggable-resizable": "^1.7.5",
     "vue-iscroll-view": "^1.0.3",
